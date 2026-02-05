@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import { Link, usePage } from "@inertiajs/react";
 import {
     Bell,
@@ -18,25 +18,38 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/Components/ui/Popover";
+import toast from "react-hot-toast";
 
 const menuItems = [
-    { name: "Dashboard", href: route("dashboard"), icon: House },
-    { name: "Acara", href: "#", icon: CalendarDays },
+    { name: "Dashboard", href: route("admin.dashboard"), icon: House },
+    { name: "Acara", href: route("admin.events.index"), icon: CalendarDays },
     { name: "Transaksi", href: "#", icon: ReceiptText },
     { name: "Pengguna", href: "#", icon: UsersRound },
 ];
 
 export function AdminLayout({ children, header }) {
-    const { url, props } = usePage();
-    const user = props.auth.user;
+    const { url, props } = usePage()
+    const user = props.auth.user
+    const { flash } = props
+
+    const shown = useRef(false)
+
     const [isSidebarVisible, setIsSidebarVisible] = useState(() => {
-        const stored = localStorage.getItem("sidebarVisible");
-        return stored === null ? true : stored === "true";
-    });
+        const stored = localStorage.getItem("sidebarVisible")
+        return stored === null ? true : stored === "true"
+    })
 
     useEffect(() => {
-        localStorage.setItem("sidebarVisible", isSidebarVisible);
-    }, [isSidebarVisible]);
+        localStorage.setItem("sidebarVisible", isSidebarVisible)
+    }, [isSidebarVisible])
+
+    useEffect(() => {
+        if (shown.current) return
+
+        if (flash?.success) toast.success(flash.success)
+
+        shown.current = true
+    }, [flash])
 
     return (
         <div className="flex min-h-screen bg-gray-100">

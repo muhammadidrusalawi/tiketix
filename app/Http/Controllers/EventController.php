@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Event\CreateEventRequest;
 use App\Models\Event;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class EventController extends Controller
 {
@@ -12,7 +16,11 @@ class EventController extends Controller
      */
     public function index()
     {
-        //
+        return Inertia::render('Admin/Events/Index', [
+            'events' => Event::with('tickets')
+                ->orderBy('created_at', 'desc')
+                ->paginate(10),
+        ]);
     }
 
     /**
@@ -20,15 +28,42 @@ class EventController extends Controller
      */
     public function create()
     {
-        //
+        return Inertia::render('Admin/Events/Create');
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(CreateEventRequest $request)
     {
-        //
+        return DB::transaction(function () use ($request) {
+            $data = $request->validated();
+
+            $tickets = $data['tickets'];
+            unset($data['tickets']);
+
+            $uploadResult = Cloudinary::uploadApi()->upload(
+                $request->file('image')->getRealPath(),
+                [
+                    'folder' => 'Tiketix/Events',
+                ]
+            );
+
+            $data['image'] = $uploadResult['secure_url'];
+            $data['image_public_id'] = $uploadResult['public_id'];
+
+            $event = Event::create($data);
+
+            foreach ($tickets as $ticket) {
+                $event->tickets()->create([
+                    'name'  => $ticket['name'],
+                    'price' => $ticket['price'],
+                    'stock' => $ticket['stock'],
+                ]);
+            }
+
+            return redirect()->route('admin.events.index')->with('success', 'Acara berhasil ditambahkan');
+        });
     }
 
     /**
@@ -36,7 +71,9 @@ class EventController extends Controller
      */
     public function show(Event $event)
     {
-        //
+        return Inertia::render('Admin/Events/Show', [
+            'event' => $event->load('tickets'),
+        ]);
     }
 
     /**
